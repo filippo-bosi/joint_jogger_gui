@@ -3,7 +3,4 @@ Panels:
     Name: Joint Jogger
     topic: /velocity_controller/commands
     rate_hz: 50.0
-    step: 0.2
-    joints: "joint_0;joint_1;joint_2"
-Visualization Manager:
-  Class: ""
+    joint_count: 7
