@@ -1,0 +1,8 @@
+<library path="joint_jogger_gui">
+  <class
+      name="joint_jogger_gui/JointJoggerPanel"
+      type="joint_jogger_gui::JointJoggerPanel"
+      base_class_type="rviz_common::Panel">
+    <description>GUI panel with +/- buttons to jog joints via velocity commands.</description>
+  </class>
+</library>
