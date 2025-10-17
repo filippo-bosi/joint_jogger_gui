@@ -2,7 +2,7 @@
 <package format="3">
   <name>joint_jogger_gui</name>
   <version>0.1.0</version>
-  <description>RViz2 panel to jog joints using velocity commands (+/- buttons).</description>
+  <description>RViz2 panel to jog joints using velocity commands (◄/► buttons).</description>
   <maintainer email="fb@cobod.com">Filippo Bosi</maintainer>
   <license>Apache-2.0</license>
 

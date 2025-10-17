@@ -1,27 +1,28 @@
 #pragma once
 
-#include <QPushButton>
 #include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QScrollArea>
+#include <QSpinBox>
 #include <QTimer>
+#include <QToolButton>
 #include <QWidget>
-
 #include <memory>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
 #include <rclcpp/rclcpp.hpp>
 #include <rviz_common/panel.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
+#include <string>
+#include <vector>
 
-namespace joint_jogger_gui {
+namespace joint_jogger_gui
+{
 
-class JointJoggerPanel : public rviz_common::Panel {
+class JointJoggerPanel : public rviz_common::Panel
+{
   Q_OBJECT
 public:
   explicit JointJoggerPanel(QWidget * parent = nullptr);
@@ -34,50 +35,51 @@ public:
 private Q_SLOTS:
   void onTopicEdited();
   void onRateChanged(double hz);
-  void onStepChanged(double step);
-  void onAddJoint();
-  void onClearAll();
   void onStopAll();
+  void onCountChanged(int n);
+  void onAddOne();
+  void onRemoveOne();
 
 private:
-  struct RowWidgets {
-    QLabel * name_label {nullptr};
-    QPushButton * minus_btn {nullptr};
-    QPushButton * plus_btn {nullptr};
+  struct RowWidgets
+  {
+    QLabel * name_label{nullptr};
+    QToolButton * minus_btn{nullptr};
+    QToolButton * plus_btn{nullptr};
+    QDoubleSpinBox * step_spin{nullptr};
   };
 
   void ensureNode();
   void rebuildPublisher();
   void publishOnce();
-  void setVelocityFor(const std::string & joint, double vel);
-  void addJointRow(const std::string & joint);
+  void setVelocityForIndex(size_t idx, double vel);
+  void addJointRow(int index);
+  void rebuildRows();
 
   // ROS
   rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr pub_;
 
   // GUI widgets
-  QLineEdit * topic_edit_ {nullptr};
-  QDoubleSpinBox * rate_spin_ {nullptr};
-  QDoubleSpinBox * step_spin_ {nullptr};
-  QLineEdit * add_joint_edit_ {nullptr};
-  QPushButton * add_joint_btn_ {nullptr};
-  QPushButton * clear_btn_ {nullptr};
-  QPushButton * stop_all_btn_ {nullptr};
+  QLineEdit * topic_edit_{nullptr};
+  QDoubleSpinBox * rate_spin_{nullptr};
+  QSpinBox * count_spin_{nullptr};
+  QPushButton * add_one_btn_{nullptr};
+  QPushButton * remove_one_btn_{nullptr};
+  QPushButton * stop_all_btn_{nullptr};
 
-  QWidget * joints_container_ {nullptr};
-  QGridLayout * joints_grid_ {nullptr};
+  QWidget * joints_container_{nullptr};
+  QGridLayout * joints_grid_{nullptr};
   QTimer publish_timer_;
 
   // Data
-  std::vector<std::string> joint_names_;
-  std::unordered_map<std::string, RowWidgets> rows_;
+  int joint_count_{7};
   std::vector<double> current_cmd_;
+  std::vector<double> step_per_joint_;
 
   // Defaults
-  std::string topic_ {"/velocity_controller/commands"};
-  double rate_hz_ {50.0};
-  double step_ {0.2}; // rad/s by default
+  std::string topic_{"/velocity_controller/commands"};
+  double rate_hz_{50.0};
 };
 
-} // namespace joint_jogger_gui
+}  // namespace joint_jogger_gui

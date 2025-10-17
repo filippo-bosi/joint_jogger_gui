@@ -4,10 +4,6 @@ project(joint_jogger_gui)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# ⬇️ ADD THESE
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rviz_common REQUIRED)
@@ -15,12 +11,18 @@ find_package(rviz_rendering REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(std_msgs REQUIRED)
 
+# Qt
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 set(QT_LIBS Qt5::Widgets)
 
+# Enable Qt MOC so Q_OBJECT works
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+# RCC/ UIC/ MOC not needed here; pure code widgets
+
 include_directories(include)
 
-# ⬇️ ADD THE HEADER HERE SO AUTOMOC SEES Q_OBJECT
 add_library(${PROJECT_NAME} SHARED
   src/joint_jogger_panel.cpp
   include/joint_jogger_gui/joint_jogger_panel.hpp
@@ -47,6 +49,7 @@ ament_target_dependencies(${PROJECT_NAME}
   std_msgs
 )
 
+# Export RViz plugin symbol
 pluginlib_export_plugin_description_file(rviz_common resource/joint_jogger_gui_plugin_description.xml)
 
 install(TARGETS ${PROJECT_NAME}
