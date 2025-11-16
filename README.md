@@ -41,3 +41,19 @@ source install/setup.bash
 rviz2
 ```
 Then add the panel as described above.
+
+---
+
+## Important: panel interference and proper removal
+
+Sometimes this panel can create unwanted interference with other velocity control commands sent to the robot, because it keeps publishing velocity messages as long as it exists.  
+To properly delete the panel it is unfortunately not enough to click on the top-right red cross (that only hides it). You must:
+
+1. Go to the **Panels** menu in RViz2.  
+2. Select **Delete Panel**.  
+3. Choose **JointJoggerPanel**.  
+4. If there are multiple instances, repeat and delete all of them.
+
+Only after deleting all JointJoggerPanel instances will the panel stop publishing and no longer interfere with other controllers.
+
+---
