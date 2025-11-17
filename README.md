@@ -4,12 +4,30 @@ RViz2 panel to jog joints with **◄/►** buttons, publishing `std_msgs/msg/Flo
 ---
 
 ## Features (new)
+- **ON/OFF toggle button**  
+  - Green = publishing enabled  
+  - Red = publishing disabled  
 - **Fixed-length command**: always publishes exactly **N** joint velocities (default **7**), as required by velocity group controllers.
-- **Per‑joint step**: each row has its own step. Defaults:
-  - `Joint_0..2` → **0.05**
+- **Per-joint step**: each row has its own step. Defaults:  
+  - `Joint_0..2` → **0.05**  
   - `Joint_3..N-1` → **0.2**
-- **Triangle buttons** (◄/►) with **hold‑to‑jog**; release sets that joint’s velocity to **0.0**.
+- **Triangle buttons** (◄/►) with **hold-to-jog**; release sets that joint’s velocity to **0.0**.
 - **Configurable**: topic and publish rate (Hz) are editable from the panel.
+- **Safe by default**: publishing is OFF when the panel starts, preventing interference with other controllers.
+
+---
+
+## ⚠️ Important Safety Disclaimer
+This tool directly commands **robot joint velocities**, which can cause robot motion.
+
+- Always verify that the robot workspace is **clear of people, tools, and obstacles**.  
+- Start with the robot in a **safe position** and with **low step values**.  
+- Especially on first use, apply extreme caution and observe the robot closely.  
+- Ensure you have an accessible **hardware emergency stop (E-Stop)**.  
+- Use this plugin **at your own risk**.  
+- The author of this plugin take **no responsibility** for any damage, injury, or malfunction caused by its use.
+
+By using this plugin, you acknowledge that **you are fully responsible** for ensuring safe operation of the robot and environment.
 
 ---
 
@@ -19,10 +37,15 @@ RViz2 panel to jog joints with **◄/►** buttons, publishing `std_msgs/msg/Flo
 3. Set **Topic** (default: `/velocity_controller/commands`).
 4. Set **Rate (Hz)** if needed (default: **50.0**).
 5. Set **Joints** count **N** (default: **7**). Row names are cosmetic (`Joint_i`); the controller uses **array order only**.
-6. (Optional) Adjust each row’s **Step**.
-7. **Hold** ◄ or ► to jog a joint; **release** to stop. Use **Stop All** to zero all velocities immediately.
+6. (Optional) Adjust each row’s **Step** value.
+7. Press the **ON/OFF toggle**:
+   - **ON (green)**: panel publishes velocity commands at the configured rate  
+   - **OFF (red)**: publishing stops and a final zero command is sent
 
-> The controller will complain if it doesn’t receive exactly **N** values; this panel guarantees an array of length **N** every tick.
+8. **Hold** ◄ or ► to jog a joint; **release** to stop.  
+   Use **Stop All** to immediately set all velocities to zero.
+
+> The controller requires exactly **N** values in the array; this panel always publishes an array of length **N** when enabled.
 
 ---
 
@@ -44,16 +67,12 @@ Then add the panel as described above.
 
 ---
 
-## Important: panel interference and proper removal
-
-Sometimes this panel can create unwanted interference with other velocity control commands sent to the robot, because it keeps publishing velocity messages as long as it exists.  
+## Important: proper panel removal
 To properly delete the panel it is unfortunately not enough to click on the top-right red cross (that only hides it). You must:
 
-1. Go to the **Panels** menu in RViz2.  
+1. Navigate to the **Panels** menu in RViz2.  
 2. Select **Delete Panel**.  
 3. Choose **JointJoggerPanel**.  
 4. If there are multiple instances, repeat and delete all of them.
-
-Only after deleting all JointJoggerPanel instances will the panel stop publishing and no longer interfere with other controllers.
 
 ---
