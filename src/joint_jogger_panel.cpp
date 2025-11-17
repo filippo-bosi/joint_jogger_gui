@@ -29,7 +29,7 @@ JointJoggerPanel::JointJoggerPanel(QWidget * parent) : rviz_common::Panel(parent
   // Rate
   ctrl_layout->addWidget(new QLabel("Rate (Hz):"), r, 0);
   rate_spin_ = new QDoubleSpinBox(ctrl_box);
-  rate_spin_->setRange(1.0, 200.0);
+  rate_spin_->setRange(1.0, 1000.0);
   rate_spin_->setDecimals(1);
   rate_spin_->setValue(rate_hz_);
   ctrl_layout->addWidget(rate_spin_, r, 1);
