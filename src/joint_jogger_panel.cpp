@@ -63,6 +63,13 @@ JointJoggerPanel::JointJoggerPanel(QWidget * parent) : rviz_common::Panel(parent
   connect(stop_all_btn_, &QPushButton::clicked, this, &JointJoggerPanel::onStopAll);
   ctrl_layout->addWidget(stop_all_btn_, r, 0, 1, 4);
   r++;
+  
+  // Publish toggle button
+  toggle_btn_ = new QPushButton("OFF", ctrl_box);
+  toggle_btn_->setStyleSheet("background-color: red; color: white; font-weight: bold;");
+  ctrl_layout->addWidget(toggle_btn_, r, 0, 1, 4);
+  connect(toggle_btn_, &QPushButton::clicked, this, &JointJoggerPanel::onTogglePublishing);
+  r++;
 
   ctrl_box->setLayout(ctrl_layout);
   root_layout->addWidget(ctrl_box);
@@ -180,9 +187,11 @@ void JointJoggerPanel::setVelocityForIndex(size_t idx, double vel)
 
 void JointJoggerPanel::publishOnce()
 {
+  if (!publishing_enabled_) return;
   if (!pub_) return;
+
   std_msgs::msg::Float64MultiArray msg;
-  msg.data = current_cmd_;  // exactly N elements
+  msg.data = current_cmd_; // exactly N elements
   pub_->publish(msg);
 }
 
@@ -254,6 +263,40 @@ void JointJoggerPanel::save(rviz_common::Config config) const
   config.mapSetValue("topic", QString::fromStdString(topic_));
   config.mapSetValue("rate_hz", static_cast<float>(rate_hz_));
   config.mapSetValue("joint_count", joint_count_);
+}
+
+void JointJoggerPanel::onTogglePublishing()
+{
+  publishing_enabled_ = !publishing_enabled_;  // flip state
+
+  if (publishing_enabled_) {
+    // Turn ON
+    toggle_btn_->setText("ON");
+    toggle_btn_->setStyleSheet("background-color: green; color: white; font-weight: bold;");
+
+    if (!pub_) {
+      rebuildPublisher();
+    }
+
+    onRateChanged(rate_hz_);
+    if (!publish_timer_.isActive()) {
+      publish_timer_.start();
+    }
+  } else {
+    // Turn OFF
+    toggle_btn_->setText("OFF");
+    toggle_btn_->setStyleSheet("background-color: red; color: white; font-weight: bold;");
+
+    // Send a final zero command
+    if (pub_) {
+      std_msgs::msg::Float64MultiArray msg;
+      msg.data.assign(static_cast<size_t>(joint_count_), 0.0);
+      pub_->publish(msg);
+    }
+
+    publish_timer_.stop();
+    pub_.reset();
+  }
 }
 
 // Export plugin

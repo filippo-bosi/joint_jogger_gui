@@ -39,6 +39,7 @@ private Q_SLOTS:
   void onCountChanged(int n);
   void onAddOne();
   void onRemoveOne();
+  void onTogglePublishing();
 
 private:
   struct RowWidgets
@@ -67,19 +68,22 @@ private:
   QPushButton * add_one_btn_{nullptr};
   QPushButton * remove_one_btn_{nullptr};
   QPushButton * stop_all_btn_{nullptr};
+  QPushButton * toggle_btn_{nullptr};
 
   QWidget * joints_container_{nullptr};
   QGridLayout * joints_grid_{nullptr};
   QTimer publish_timer_;
 
   // Data
-  int joint_count_{7};
   std::vector<double> current_cmd_;
   std::vector<double> step_per_joint_;
 
+
   // Defaults
+  int joint_count_{7};
   std::string topic_{"/velocity_controller/commands"};
   double rate_hz_{50.0};
+  bool publishing_enabled_{false};
 };
 
 }  // namespace joint_jogger_gui
