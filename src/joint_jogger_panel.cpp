@@ -4,6 +4,8 @@
 #include <QSpacerItem>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <filesystem>
 #include <rviz_common/display_context.hpp>
 #include <rviz_common/logging.hpp>
 
@@ -12,6 +14,9 @@ namespace joint_jogger_gui
 
 JointJoggerPanel::JointJoggerPanel(QWidget * parent) : rviz_common::Panel(parent)
 {
+  ensureNode();
+  loadDefaultsFromParameters();
+
   auto * root_layout = new QVBoxLayout(this);
 
   // Controls box
@@ -63,13 +68,25 @@ JointJoggerPanel::JointJoggerPanel(QWidget * parent) : rviz_common::Panel(parent
   connect(stop_all_btn_, &QPushButton::clicked, this, &JointJoggerPanel::onStopAll);
   ctrl_layout->addWidget(stop_all_btn_, r, 0, 1, 4);
   r++;
-  
-  // Publish toggle button
-  toggle_btn_ = new QPushButton("OFF", ctrl_box);
-  toggle_btn_->setStyleSheet("background-color: red; color: white; font-weight: bold;");
+
+  // Create toggle button
+  toggle_btn_ = new QPushButton(ctrl_box);
   ctrl_layout->addWidget(toggle_btn_, r, 0, 1, 4);
   connect(toggle_btn_, &QPushButton::clicked, this, &JointJoggerPanel::onTogglePublishing);
   r++;
+
+  // Initialize ON/OFF from default parameter
+  if (publishing_enabled_) {
+    toggle_btn_->setText("ON");
+    toggle_btn_->setStyleSheet("background-color: green; color: white; font-weight: bold;");
+    rebuildPublisher();
+    publish_timer_.start();
+  } else {
+    toggle_btn_->setText("OFF");
+    toggle_btn_->setStyleSheet("background-color: red; color: white; font-weight: bold;");
+    publish_timer_.stop();
+    pub_.reset();
+  }
 
   ctrl_box->setLayout(ctrl_layout);
   root_layout->addWidget(ctrl_box);
@@ -85,16 +102,18 @@ JointJoggerPanel::JointJoggerPanel(QWidget * parent) : rviz_common::Panel(parent
   scroll->setWidget(joints_container_);
   root_layout->addWidget(scroll, 1);
 
-  // Data init: per-joint step + current cmd
-  step_per_joint_.assign(joint_count_, 0.2);
-  for (int i = 0; i < joint_count_; ++i) {
-    if (i <= 2) step_per_joint_[i] = 0.05;  // Joint_0..2 default
+  // Ensure size matches joint_count_
+  if (step_per_joint_.size() != static_cast<size_t>(joint_count_)) {
+    step_per_joint_.assign(joint_count_, 0.2);
+    for (int i = 0; i < joint_count_; ++i) {
+      if (i <= 2) step_per_joint_[static_cast<size_t>(i)] = 0.05;
+    }
   }
+
   current_cmd_.assign(joint_count_, 0.0);
   rebuildRows();
 
   // ROS + publisher
-  ensureNode();
   rebuildPublisher();
 
   // Publisher timer
@@ -105,9 +124,40 @@ JointJoggerPanel::JointJoggerPanel(QWidget * parent) : rviz_common::Panel(parent
 
 void JointJoggerPanel::ensureNode()
 {
-  if (!node_) {
-    node_ = std::make_shared<rclcpp::Node>("joint_jogger_panel");
+  if (node_) {
+    return;
   }
+
+  // Try to find default params file in the installed package
+  std::string params_file;
+  try {
+    const std::string share_dir = ament_index_cpp::get_package_share_directory("joint_jogger_gui");
+    std::filesystem::path cfg_path =
+      std::filesystem::path(share_dir) / "config" / "joint_jogger_params.yaml";
+    if (std::filesystem::exists(cfg_path)) {
+      params_file = cfg_path.string();
+    }
+  } catch (const std::exception & e) {
+    // If this fails, fall back to built-in defaults
+    RCLCPP_WARN(
+      rclcpp::get_logger("joint_jogger_panel"),
+      "Could not find joint_jogger_gui share directory: %s", e.what());
+  }
+
+  rclcpp::NodeOptions options;
+  if (!params_file.empty()) {
+    // This mimics “--ros-args --params-file joint_jogger_params.yaml” internally
+    options.arguments({"--ros-args", "--params-file", params_file});
+  }
+
+  node_ = std::make_shared<rclcpp::Node>("joint_jogger_panel", options);
+
+  // Declare fallback defaults (in case some keys are missing)
+  node_->declare_parameter<int>("joint_count", joint_count_);
+  node_->declare_parameter<std::string>("topic", topic_);
+  node_->declare_parameter<double>("rate_hz", rate_hz_);
+  node_->declare_parameter<bool>("publishing_enabled", publishing_enabled_);
+  node_->declare_parameter<std::vector<double>>("step_per_joint", std::vector<double>{});
 }
 
 void JointJoggerPanel::rebuildPublisher()
@@ -191,7 +241,7 @@ void JointJoggerPanel::publishOnce()
   if (!pub_) return;
 
   std_msgs::msg::Float64MultiArray msg;
-  msg.data = current_cmd_; // exactly N elements
+  msg.data = current_cmd_;  // exactly N elements
   pub_->publish(msg);
 }
 
@@ -270,32 +320,67 @@ void JointJoggerPanel::onTogglePublishing()
   publishing_enabled_ = !publishing_enabled_;  // flip state
 
   if (publishing_enabled_) {
-    // Turn ON
     toggle_btn_->setText("ON");
     toggle_btn_->setStyleSheet("background-color: green; color: white; font-weight: bold;");
-
-    if (!pub_) {
-      rebuildPublisher();
-    }
-
-    onRateChanged(rate_hz_);
-    if (!publish_timer_.isActive()) {
-      publish_timer_.start();
-    }
+    rebuildPublisher();
+    publish_timer_.start();
   } else {
-    // Turn OFF
     toggle_btn_->setText("OFF");
     toggle_btn_->setStyleSheet("background-color: red; color: white; font-weight: bold;");
 
-    // Send a final zero command
+    // Send final zero
     if (pub_) {
       std_msgs::msg::Float64MultiArray msg;
-      msg.data.assign(static_cast<size_t>(joint_count_), 0.0);
+      msg.data.assign(current_cmd_.size(), 0.0);
       pub_->publish(msg);
     }
 
     publish_timer_.stop();
     pub_.reset();
+  }
+}
+
+void JointJoggerPanel::loadDefaultsFromParameters()
+{
+  if (!node_) {
+    ensureNode();
+  }
+
+  // Scalar params
+  int jc_param;
+  if (node_->get_parameter("joint_count", jc_param)) {
+    joint_count_ = std::max(1, jc_param);
+  }
+
+  std::string topic_param;
+  if (node_->get_parameter("topic", topic_param)) {
+    topic_ = topic_param;
+  }
+
+  double rate_param;
+  if (node_->get_parameter("rate_hz", rate_param)) {
+    rate_hz_ = std::max(1e-3, rate_param);
+  }
+
+  bool enabled_param;
+  if (node_->get_parameter("publishing_enabled", enabled_param)) {
+    publishing_enabled_ = enabled_param;
+  }
+
+  // Per-joint step array (optional)
+  std::vector<double> steps_param;
+  if (node_->get_parameter("step_per_joint", steps_param) && !steps_param.empty()) {
+    // If provided, use it and derive joint_count_ from its size
+    joint_count_ = static_cast<int>(steps_param.size());
+    step_per_joint_ = steps_param;
+  } else {
+    // Fallback: hardcoded pattern
+    step_per_joint_.assign(joint_count_, 0.2);
+    for (int i = 0; i < joint_count_; ++i) {
+      if (i <= 2) {
+        step_per_joint_[static_cast<size_t>(i)] = 0.05;  // Joint_0..2 default
+      }
+    }
   }
 }
 

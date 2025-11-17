@@ -49,6 +49,42 @@ By using this plugin, you acknowledge that **you are fully responsible** for ens
 
 ---
 
+## Configuration via YAML (default startup values)
+
+The panel automatically loads default settings from the file:
+```text
+/config/joint_jogger_params.yaml
+```
+
+This lets you define **your own defaults** for:
+- number of joints  
+- topic name  
+- publish rate  
+- whether publishing starts ON or OFF  
+- per-joint velocity steps  
+
+A basic example:
+
+```yaml
+joint_jogger_panel:
+  ros__parameters:
+    joint_count: 7
+    topic: "/velocity_controller/commands"
+    rate_hz: 50.0
+    publishing_enabled: false
+
+    # Optional: override joint_count and per-joint steps
+    step_per_joint: [0.05, 0.05, 0.05, 0.2, 0.2, 0.2, 0.2]
+```
+
+If `step_per_joint` is provided, the panel will:
+- set `joint_count` to the length of the array
+- use these exact step values for each row
+
+If the file is not modified, the plugin uses its built-in defaults.
+
+---
+
 ## Message format
 ```text
 std_msgs/msg/Float64MultiArray

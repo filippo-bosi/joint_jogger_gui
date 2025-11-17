@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rviz_common REQUIRED)
 find_package(rviz_rendering REQUIRED)
@@ -47,6 +48,7 @@ ament_target_dependencies(${PROJECT_NAME}
   rviz_rendering
   pluginlib
   std_msgs
+  ament_index_cpp
 )
 
 # Export RViz plugin symbol
@@ -67,5 +69,9 @@ install(FILES resource/joint_jogger_gui_plugin_description.xml
 
 install(DIRECTORY rviz/
   DESTINATION share/${PROJECT_NAME}/rviz)
+
+install(DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
 
 ament_package()

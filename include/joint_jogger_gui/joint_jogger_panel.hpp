@@ -56,6 +56,7 @@ private:
   void setVelocityForIndex(size_t idx, double vel);
   void addJointRow(int index);
   void rebuildRows();
+  void loadDefaultsFromParameters();
 
   // ROS
   rclcpp::Node::SharedPtr node_;
@@ -78,11 +79,10 @@ private:
   std::vector<double> current_cmd_;
   std::vector<double> step_per_joint_;
 
-
   // Defaults
   int joint_count_{7};
   std::string topic_{"/velocity_controller/commands"};
-  double rate_hz_{50.0};
+  double rate_hz_{250.0};
   bool publishing_enabled_{false};
 };
 
